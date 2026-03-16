@@ -398,6 +398,7 @@ func ipToAddr(ip net.IP, intf *net.Interface) (netip.Addr, error) {
 
 // IsAddrRouted checks if the candidate address would route to the vpn, in which case it returns true and the matched prefix.
 func IsAddrRouted(addr netip.Addr, vpnRoutes []netip.Prefix) (bool, netip.Prefix) {
+	return false, netip.Prefix{}
 	localRoutes, err := hasSeparateRouting()
 	if err != nil {
 		if !errors.Is(err, ErrRoutingIsSeparate) {

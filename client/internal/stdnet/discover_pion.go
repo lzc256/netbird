@@ -1,9 +1,8 @@
 package stdnet
 
 import (
-	"net"
-
 	"github.com/pion/transport/v3"
+	"github.com/wlynxg/anet"
 )
 
 type pionDiscover struct {
@@ -12,7 +11,7 @@ type pionDiscover struct {
 func (d pionDiscover) iFaces() ([]*transport.Interface, error) {
 	ifs := []*transport.Interface{}
 
-	oifs, err := net.Interfaces()
+	oifs, err := anet.Interfaces()
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +19,7 @@ func (d pionDiscover) iFaces() ([]*transport.Interface, error) {
 	for _, oif := range oifs {
 		ifc := transport.NewInterface(oif)
 
-		addrs, err := oif.Addrs()
+		addrs, err := anet.InterfaceAddrsByInterface(&oif)
 		if err != nil {
 			return nil, err
 		}
