@@ -83,5 +83,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: netbird-anet-linux-arm64-${{ needs.check-update.outputs.netbird_sha }}
-          path: netbird-anet-linux-arm64
+          path: netbird-src/netbird-anet-linux-arm64
           retention-days: 90
