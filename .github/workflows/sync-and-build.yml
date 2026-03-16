@@ -1,0 +1,98 @@
+name: Sync & Smart Build Android
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 每 6 小时自动检查
+  workflow_dispatch:      # 允许手动强制触发
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.compare.outputs.should_build }}
+      netbird_sha: ${{ steps.hashes.outputs.netbird_sha }}
+    steps:
+      - name: Get Latest Hashes
+        id: hashes
+        run: |
+          # 获取上游 NetBird 最新 Commit
+          NETBIRD_SHA=$(curl -s https://api.github.com/repos/netbirdio/netbird/commits/main | jq -r .sha)
+          # 获取你的 Anet 最新 Commit
+          ANET_SHA=$(curl -s https://api.github.com/repos/lzc256/anet/commits/main | jq -r .sha)
+          
+          echo "netbird_sha=$NETBIRD_SHA" >> $GITHUB_OUTPUT
+          echo "combined_key=build-${NETBIRD_SHA}-${ANET_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Cache Check
+        id: cache_check
+        uses: actions/cache@v4
+        with:
+          path: build_status.txt
+          key: ${{ steps.hashes.outputs.combined_key }}
+
+      - name: Compare
+        id: compare
+        run: |
+          if [ -f build_status.txt ]; then
+            echo "No updates detected in both Upstream and Anet. Skipping."
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Updates detected. Proceeding to build."
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "done" > build_status.txt
+          fi
+
+  build:
+    needs: check-update
+    if: needs.check-update.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 检出配置分支 (获取 Patch 文件)
+      - name: Checkout Config
+        uses: actions/checkout@v4
+        with:
+          path: config-repo
+
+      # 2. 检出上游 NetBird
+      - name: Checkout Upstream
+        uses: actions/checkout@v4
+        with:
+          repository: netbirdio/netbird
+          ref: main
+          path: netbird-src
+
+      # 3. 应用补丁
+      - name: Apply Patch
+        run: |
+          cd netbird-src
+          git apply ../config-repo/android_direct.patch
+
+      # 4. 环境配置与构建
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23' # 建议使用最新稳版
+
+      - name: Compile
+        run: |
+          cd netbird-src
+          # 动态替换依赖
+          go mod edit -replace github.com/wlynxg/anet=github.com/lzc256/anet@latest
+          go mod tidy
+          # 编译 Android 适配版
+          go build -v -tags "netstack" -o ../nb2-android ./client
+
+      # 5. 发布 Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ needs.check-update.outputs.netbird_sha }}
+          name: NetBird Android ${{ github.run_number }}
+          files: nb2-android
+          body: |
+            ### 自动构建说明
+            - **上游版本 (SHA):** `${{ needs.check-update.outputs.netbird_sha }}`
+            - **编译时间:** ${{ github.event.repository.updated_at }}
+            - **适配补丁:** 已集成 lzc256/anet 权限绕过。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
