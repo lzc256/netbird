@@ -21,7 +21,7 @@ jobs:
         id: hashes
         run: |
           NETBIRD_SHA=$(curl -s https://api.github.com/repos/netbirdio/netbird/commits/main | jq -r .sha)
-          ANET_SHA=$(curl -s https://api.github.com/repos/lzc256/anet/commits/main | jq -r .sha)
+          ANET_SHA=$(curl -s https://api.github.com/repos/lzc256/anet/commits/android-build | jq -r .sha)
           
           echo "netbird_sha=$NETBIRD_SHA" >> $GITHUB_OUTPUT
           echo "combined_key=build-${NETBIRD_SHA}-${ANET_SHA}" >> $GITHUB_OUTPUT
