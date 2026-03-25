@@ -2,7 +2,7 @@ name: Sync & Build Android Anet
 
 on:
   schedule:
-    - cron: '56 6,18 * * *'
+    - cron: '56 18 */2 * *'
   workflow_dispatch:
   push:
     branches:
