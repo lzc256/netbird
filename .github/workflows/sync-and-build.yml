@@ -65,7 +65,7 @@ jobs:
       - name: Apply Patch
         run: |
           cd netbird-src
-          git apply ../config-repo/android-anet.patch
+          git apply --3way ../config-repo/android-anet.patch
 
       - name: Setup Go
         uses: actions/setup-go@v6
